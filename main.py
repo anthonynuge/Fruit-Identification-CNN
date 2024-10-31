@@ -6,11 +6,6 @@ if __name__ == "__main__":
 
     # if no model download and train the model
 
-    root = tk.Tk()
-    root.style = tk.ttk.Style()
-    root.style.theme_use("clam")
-
-
-    app = FruitClassifierGui(root)
+    app = FruitClassifierGui()
 
 
