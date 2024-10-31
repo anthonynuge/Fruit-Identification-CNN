@@ -1,7 +1,16 @@
 from src.download_dataset import download_dataset
-from src.gui import start_gui
+import tkinter as tk
+from src.gui import FruitClassifierGui
 
 if __name__ == "__main__":
-    # download_dataset()
 
-    start_gui()
+    # if no model download and train the model
+
+    root = tk.Tk()
+    root.style = tk.ttk.Style()
+    root.style.theme_use("clam")
+
+
+    app = FruitClassifierGui(root)
+
+
