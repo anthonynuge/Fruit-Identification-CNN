@@ -11,13 +11,14 @@ import shutil
 import sv_ttk
 
 class FruitClassifierGui:
-    def __init__(self):
+    def __init__(self, model=None):
         self.root = TkinterDnD.Tk()
         self.root.title("Fruit Classification App")
         self.root.geometry("1000x600")
         sv_ttk.set_theme("dark")
         self.canvas_width = 325
         self.canvas_height = 325
+        self.model = model
 
         # App data
         self.displayed_image = None
@@ -26,7 +27,7 @@ class FruitClassifierGui:
 
         # Bind Ctrl+V (or Command+V on macOS) to paste and save image
         self.root.bind("<Control-v>", self.paste_image)
-        self.root.bind("<Command-v>", self.paste_image)  # For macOS compatibility
+        self.root.bind("<Command-v>", self.paste_image)  
         os.makedirs(self.temp_dir, exist_ok=True)
 
         # Drag and drop 
@@ -60,7 +61,7 @@ class FruitClassifierGui:
         load_btn.pack(pady=5, padx=10, fill="x")
 
         # Classify button
-        classify_btn = ttk.Button(sidebar_frame, text="Classify Image")
+        classify_btn = ttk.Button(sidebar_frame, text="Classify Image", command=self.classify_image)
         classify_btn.pack(pady=5, padx=10, fill="x")
 
         test_btn = ttk.Button(sidebar_frame, text="Test", command=self.test_stuff)
@@ -93,6 +94,18 @@ class FruitClassifierGui:
 
 
         self.root.mainloop()
+
+    def classify_image(self):
+        if self.model is None:
+            print("No model loaded.")
+            return
+        if self.images[0] is None:
+            print("No image loaded")
+            return
+
+        img = Image.open(self.images[0])
+        
+
 
     def on_drop(self, event):
         """Handle drag-and-drop files"""

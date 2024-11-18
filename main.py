@@ -9,7 +9,7 @@ MODELS_DIR = './models'
 
 def available_model(path=MODELS_DIR):
     """Check if there is a model trained and ready. First application boot model will be trained using data"""
-    return any(os.path.isfile(os.path.join(path, m) for m in os.listdir(path)))
+    return any(os.path.isfile(os.path.join(path, m)) for m in os.listdir(path))
 
 def load_newest_model(path=MODELS_DIR):
     """Load the most recent model"""
@@ -33,9 +33,9 @@ def main():
         subprocess.run(["python", "./src/train.py"])
         model = load_newest_model()
 
+    app = FruitClassifierGui(model = model)
+    app.run()
+
 
 if __name__ == "__main__":
-
-    # if no model download and train the model
-
-    app = FruitClassifierGui()
+    main()
