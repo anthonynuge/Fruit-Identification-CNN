@@ -7,23 +7,31 @@ import requests
 from io import BytesIO
 import os
 import shutil
+from src.model import predict_image_confidence
+from src.loader import load_and_preprocess_image
 
 import sv_ttk
 
 class FruitClassifierGui:
-    def __init__(self, model=None):
+    def __init__(self, model=None, class_names=[]):
         self.root = TkinterDnD.Tk()
         self.root.title("Fruit Classification App")
         self.root.geometry("1000x600")
         sv_ttk.set_theme("dark")
         self.canvas_width = 325
         self.canvas_height = 325
-        self.model = model
 
-        # App data
+        # state variables
         self.displayed_image = None
         self.images = []
         self.temp_dir = "./data/temp_images"
+        self.model = model
+        self.class_names = class_names
+        # classification mode tracker ( 1 = single file, 2 = batch )
+        self.classification_mode = tk.IntVar(value=1) 
+        self.top_pred = "N/A"
+        self.top_conf = 0.00
+        self.confidence_report = {}
 
         # Bind Ctrl+V (or Command+V on macOS) to paste and save image
         self.root.bind("<Control-v>", self.paste_image)
@@ -36,15 +44,12 @@ class FruitClassifierGui:
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        # classification mode tracker ( 1 = single file, 2 = batch )
-        self.classification_mode = tk.IntVar(value=1)
-
         # Side bar frame ==========================================
         sidebar_frame = ttk.Frame(self.root, width=300)
         sidebar_frame.pack_propagate(False)
         sidebar_frame.pack(side="left", fill="y")
 
-        sidebar_label =ttk.Label(sidebar_frame, text="Fruit Classifier", font=("Arial", 16))
+        sidebar_label =ttk.Label(sidebar_frame, text="Fruit Classifier", font=("Roboto", 16, "bold"))
         sidebar_label.pack(pady=10)
 
         mode_frame = ttk.Frame(sidebar_frame)
@@ -64,8 +69,10 @@ class FruitClassifierGui:
         classify_btn = ttk.Button(sidebar_frame, text="Classify Image", command=self.classify_image)
         classify_btn.pack(pady=5, padx=10, fill="x")
 
-        test_btn = ttk.Button(sidebar_frame, text="Test", command=self.test_stuff)
-        test_btn.pack(pady=5, padx=10, fill="x")
+        # Clear button
+        clear_btn = ttk.Button(sidebar_frame, text="Clear", command=self.clear)
+        clear_btn.pack(pady=5, padx=10, fill="x")
+
 
         separator = ttk.Separator(self.root, orient="vertical")
         separator.pack(side="left", fill="y", padx=(0, 10))
@@ -83,29 +90,104 @@ class FruitClassifierGui:
         horizonal_separator.pack(fill="x", pady=5)
 
         # result frame ============================================
-        result_frame = ttk.Frame(main_frame, padding=10)
-        result_frame.pack(fill="x", pady=(5, 2))
+        result_frame = ttk.Frame(main_frame)
+        result_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        result_frame_label = ttk.Label(result_frame, text="OUTPUT: ", font=("Roboto", 12, "bold"))
+        result_frame_label.pack(anchor="w")
 
-        result_label = ttk.Label(result_frame, text="Results", font=("Arial", 14))
-        result_label.pack(anchor="w")
+        analysis_frame = ttk.Frame(result_frame)
+        analysis_frame.pack(fill="both", expand=True)
+        analysis_frame.rowconfigure(0, weight=1)
+        analysis_frame.columnconfigure(0, weight=2)
+        analysis_frame.columnconfigure(1, weight=3)
 
-        result_text = ttk.Label(result_frame, text="N/a")
-        result_text.pack(anchor="w")
+        prediction_frame = ttk.Frame(analysis_frame)
+        prediction_frame.grid(row=0, column=0, sticky="nswe")
 
+        self.classification_report_frame = ttk.Frame(analysis_frame)
+        self.classification_report_frame.grid(row=0, column=1, sticky="nswe")
+
+        self.prediction_percentage_label = ttk.Label(
+            prediction_frame, text = self.top_conf, font=("Roboto", 28, "bold")
+        )
+        self.prediction_percentage_label.pack(pady=(50, 5), anchor="center")
+        self.prediction_label = ttk.Label(
+            prediction_frame, text = self.top_pred, font=("Roboto", 16)
+        )
+        self.prediction_label.pack(pady=(5,20), anchor="center")
+
+        table_frame = ttk.Frame(self.classification_report_frame)
+        table_frame.pack(fill="both", expand=True)
+
+        self.report_table = ttk.Treeview(table_frame, columns=("Class", "Confidence"), show="headings")
+        self.report_table.heading("Class", text="Class")
+        self.report_table.heading("Confidence", text="Confidence (%)")
+        self.report_table.column("Class", width=200, anchor="center")
+        self.report_table.column("Confidence", width=75, anchor="center")
+        self.report_table.pack(side="left", fill="both", expand=True)
+        # Add scrollbar for the table
+        scrollbar = ttk.Scrollbar(
+            table_frame, orient="vertical", command=self.report_table.yview
+        )
+        self.report_table.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
 
         self.root.mainloop()
+
 
     def classify_image(self):
         if self.model is None:
             print("No model loaded.")
             return
-        if self.images[0] is None:
+        if len(self.images) == 0:
             print("No image loaded")
             return
 
-        img = Image.open(self.images[0])
-        
+        processed_image = load_and_preprocess_image(self.images[0])
+        result, confidence_report = predict_image_confidence(self.model, processed_image, self.class_names)
 
+        classification_report_percentages = {
+            class_name: round(confidence * 100, 2) for class_name, confidence in confidence_report.items()
+        }
+        sorted_report = sorted(classification_report_percentages.items(), key=lambda x: x[1], reverse=True)
+
+        self.confidence_report = sorted_report
+
+        # self.update_results(result, confidence_report)
+        self.update_results()
+        self.images = []
+
+    def update_results(self):
+        if len(self.confidence_report) > 0:
+            self.top_pred, self.top_conf = self.confidence_report[0]
+
+        if self.top_conf == 0 and self.top_pred == "N/A":
+            color = "white"
+        elif self.top_conf > 90:
+            color = "green"
+        elif self.top_conf > 70:
+            color = "yellow"
+        else:
+            color = "red"
+        
+        self.clear_table()
+
+        for class_name, confidence in self.confidence_report[1:]:
+            self.report_table.insert("", "end", values=(class_name, f"{confidence}%"))
+        self.prediction_percentage_label.config(text=f"{self.top_conf:.2f}%", foreground=color)
+        self.prediction_label.config(text=f"{self.top_pred}", foreground=color)
+
+    def clear(self): 
+        self.top_pred = "N/A"
+        self.top_conf = 0.00
+        self.displayed_image = None
+        self.images = []
+        self.confidence_report = []
+        self.update_results()
+
+    def clear_table(self): 
+        for row in self.report_table.get_children():
+            self.report_table.delete(row)
 
     def on_drop(self, event):
         """Handle drag-and-drop files"""

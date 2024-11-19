@@ -13,6 +13,7 @@ MODELS_DIR = './models'
 BATCH_SIZE = 16
 EPOCHS = 30
 IMG_SIZE = (224, 224)
+NUM_CATEGORIES = 9
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
@@ -48,11 +49,7 @@ def data_split_augment(data_dir, img_size, batch_size, validation_split = .2):
     ])
 
     train_ds = train_ds.map(lambda x, y: (data_aug(x, training=True), y), num_parallel_calls=AUTOTUNE )
-
     normalization_lay = tf.keras.layers.Rescaling(1./255)
-
-    # train_ds = train_ds.map(lambda x, y: (data_aug(x, training=True), y), num_parallel_calls=AUTOTUNE )
-    # train_ds = train_ds.map(lambda x, y: (data_aug(normalization_lay(x), training=True), y), num_parallel_calls=AUTOTUNE )
     train_ds = train_ds.map(lambda x, y: (normalization_lay(x), y))
     val_ds = val_ds.map(lambda x, y: (normalization_lay(x), y), num_parallel_calls=AUTOTUNE)
 
@@ -60,19 +57,11 @@ def data_split_augment(data_dir, img_size, batch_size, validation_split = .2):
     train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
     val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-    return train_ds, val_ds
+    return train_ds, val_ds, class_names
 
-def train_model():
-    train_ds, val_ds = data_split_augment(DATA_DIR, IMG_SIZE, BATCH_SIZE)
-    num_categories = train_ds.cardinality().numpy()
-
-    # num_categories = len(train_ds.class_names)
-
-    print("00000000000000000000000000000000000000000000000000000000000000000")
-    print(num_categories)
-    # model = build_model(input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3), num_categories=num_categories)
-    model = build_model(input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3), num_categories=num_categories)
-    model.fit(train_ds, validation_data=val_ds, epochs=EPOCHS)
+def save_model(model):
+    # Takes a model and saves it in the model directory.
+    # If there are already models increments the version number.
     os.makedirs(MODELS_DIR, exist_ok=True)
     models = [m for m in os.listdir(MODELS_DIR) if m.startswith("modelV") and m.endswith(".keras")]
     versions = [int(f[6:-6]) for f in models if f[6:-6].isdigit()]
@@ -80,6 +69,12 @@ def train_model():
     save_dest = os.path.join(MODELS_DIR, f"modelV{next}.keras")
     model.save(save_dest)
     print("Model successful trained and saved")
+
+def train_model():
+    train_ds, val_ds, class_names = data_split_augment(DATA_DIR, IMG_SIZE, BATCH_SIZE)
+    model = build_model(input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3), num_categories=len(class_names))
+    model.fit(train_ds, validation_data=val_ds, epochs=EPOCHS)
+    save_model(model)
 
 if __name__ == "__main__":
     train_model()

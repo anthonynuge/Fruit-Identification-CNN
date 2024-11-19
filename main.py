@@ -23,6 +23,9 @@ def load_newest_model(path=MODELS_DIR):
     print(f"{newest} loaded")
     return model
 
+def get_class_names():
+    class_names = sorted([entry.name for entry in os.scandir("./data/raw") if entry.is_dir()])
+    return class_names
 
 def main():
     if available_model():
@@ -32,8 +35,9 @@ def main():
         print("No available model. Training a new one. This can take a awhile")
         subprocess.run(["python", "./src/train.py"])
         model = load_newest_model()
-
-    app = FruitClassifierGui(model = model)
+    
+    class_names = get_class_names()
+    app = FruitClassifierGui(model = model, class_names = class_names)
     app.run()
 
 
