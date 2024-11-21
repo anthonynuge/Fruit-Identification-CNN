@@ -42,18 +42,16 @@ class FruitClassifierGui:
         self.class_names = class_names
         # classification mode tracker ( 1 = single file, 2 = batch )
         self.classification_mode = tk.IntVar(value=1) 
-        self.images_dict = {}
-        self.current_image = None
 
-        # Bind Ctrl+V (or Command+V on macOS) to paste and save image
-        # self.root.bind("<Control-v>", self.paste_image)
-        # self.root.bind("<Command-v>", self.paste_image)  
-        # os.makedirs(self.temp_dir, exist_ok=True)
+        # Dictionary for storing image_data (key: file_path, value: image_data)
+        self.images_dict = {}
+
+        # For tree selection keeping track of what image in dict is currently selected
+        self.current_image = None
 
         # Drag and drop 
         self.root.drop_target_register(DND_FILES)
         self.root.dnd_bind('<<Drop>>', self.on_drop)
-
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # Side bar frame ==========================================
@@ -154,6 +152,7 @@ class FruitClassifierGui:
 
         self.root.mainloop()
 
+    # Changes classify button functionality depending on which mode is set
     def handle_classify(self):
         mode = self.classification_mode.get()
         if mode == 1:
@@ -174,7 +173,6 @@ class FruitClassifierGui:
         if (image_data.top_pred != "N/A"):
             print("Already classified")
             return 
-
         processed_image = load_and_preprocess_image(image_data.file_path)
         result, confidence_report = predict_image_confidence(self.model, processed_image, self.class_names)
 
@@ -220,7 +218,6 @@ class FruitClassifierGui:
         self.prediction_percentage_label.config(text=f"{image_data.top_conf:.2f}%", foreground=color)
         self.prediction_label.config(text=f"{image_data.top_pred}", foreground=color)
 
-
     def update_loaded_images_table(self):
         for row in self.loaded_images_table.get_children():
             self.loaded_images_table.delete(row)
@@ -254,10 +251,8 @@ class FruitClassifierGui:
 
     def table_select(self, event):
         selected = self.loaded_images_table.selection()
-
         if not selected:
             return
-
         file_path = selected[0]
         print("Selected from tree: ", file_path)
 
@@ -268,7 +263,7 @@ class FruitClassifierGui:
             self.update_results(image_data)
             self.current_image = file_path
 
-
+    # Drag and drop file functinality
     def on_drop(self, event):
         """Handle drag-and-drop files"""
         # Check if files are dropped
@@ -283,22 +278,10 @@ class FruitClassifierGui:
                 self.display_image(file_path)
                 self.current_image = file_path
 
-    # def paste_image(self):
-    #     """Check the clipboard for an image and display it."""
-    #     try:
-    #         # Get the image from the clipboard
-    #         clipboard_content = ImageGrab.grabclipboard()
-    #         if isinstance(clipboard_content, Image.Image):
-    #             # Display the image on the canvas
-    #             self.display_image(clipboard_content)
-    #         else:
-    #             print("No image data found on clipboard.")
-    #     except Exception as e:
-    #         print(f"Error: {e}")
 
     def load_image(self):
         """
-        Load a image or a dir of images into the app. First image is displayed
+        Load a image or a dir of images into the app.
         """
         # Open a file dialog to select an image file
         if self.classification_mode.get() == 1 :
@@ -315,6 +298,7 @@ class FruitClassifierGui:
                 self.display_image(file_path)
                 self.current_image = file_path
 
+        # Load all images in a directory
         elif self.classification_mode.get() == 2 : 
             dir_path = filedialog.askdirectory()
             if dir_path:
@@ -334,58 +318,6 @@ class FruitClassifierGui:
             self.displayed_image = ImageTk.PhotoImage(resized_image)
             self.canvas.delete("all")
             self.canvas.create_image(self.canvas_width // 2, self.canvas_height // 2, anchor="center", image=self.displayed_image)
-
-    # def paste_image(self, event=None):
-    #     """Handle image pasting from the clipboard, checking for URLs or image data."""
-    #     try:
-    #         # Try to get clipboard content as text (URL case)
-    #         clipboard_content = self.root.clipboard_get()
-    #         if clipboard_content.startswith("http"):
-    #             # If clipboard has a URL, try to download the image
-    #             self.download_and_display_image(clipboard_content)
-    #         else:
-    #             # If clipboard doesn't contain a URL, try getting it as image data
-    #             self.paste_image_from_clipboard()
-    #     except tk.TclError:
-    #         # Handle case where clipboard_get() fails and grab image directly
-    #         self.paste_image_from_clipboard()
-
-    # def paste_image_from_clipboard(self):
-    #     """Handle cases where an actual image is in the clipboard."""
-    #     try:
-    #         clipboard_content = ImageGrab.grabclipboard()
-    #         if isinstance(clipboard_content, Image.Image):
-    #             # Save image temporarily and display
-    #             temp_path = self.save_image_temp(clipboard_content)
-    #             self.load_image(temp_path)
-    #             # self.images = [temp_path]
-    #             # self.display_image(0)
-    #         else:
-    #             print("No image data found on clipboard.")
-    #     except Exception as e:
-    #         print(f"Error grabbing image from clipboard: {e}")
-
-    # def download_and_display_image(self, url):
-    #     """Download image from a URL and display it on the canvas."""
-    #     try:
-    #         response = requests.get(url)
-    #         if response.status_code == 200 and "image" in response.headers["Content-Type"]:
-    #             image_data = BytesIO(response.content)
-    #             image = Image.open(image_data)
-    #             temp_path = self.save_image_temp(image)
-    #             self.image_paths.append(temp_path)
-    #             self.display_image(temp_path)
-    #         else:
-    #             print("The URL does not contain an image.")
-    #     except Exception as e:
-    #         print(f"Error downloading image: {e}")
-
-    # def save_image_temp(self, image):
-    #     """Save the image temporarily and return its file path."""
-    #     image_name = f"{uuid.uuid4()}.png"
-    #     temp_path = os.path.join(self.temp_dir, image_name)
-    #     image.save(temp_path, "PNG")
-    #     return temp_path
     
     def on_close(self):
         """Clean up temporary files and close the application."""
