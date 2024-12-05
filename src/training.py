@@ -4,18 +4,22 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 import tensorflow as tf
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.model import build_model
 
 # Constants
-DATA_DIR = './data/raw'
-MODELS_DIR = './models'
+# DATA_DIR = '../data/raw'
+# MODELS_DIR = './models'
 BATCH_SIZE = 16
 EPOCHS = 30
 IMG_SIZE = (224, 224)
 NUM_CATEGORIES = 9
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+datas_dir = os.path.join(base_dir, "data")
+DATA_DIR = os.path.join(datas_dir, "raw")
+MODELS_DIR = os.path.join(base_dir, "models")
 
 def data_split_augment(data_dir, img_size, batch_size, validation_split = .2):
 
@@ -29,6 +33,8 @@ def data_split_augment(data_dir, img_size, batch_size, validation_split = .2):
         label_mode="categorical",
         color_mode="rgb"
     )
+
+    class_names = train_ds.class_names
 
     val_ds = tf.keras.preprocessing.image_dataset_from_directory(
         data_dir,
@@ -78,4 +84,3 @@ def train_model():
 
 if __name__ == "__main__":
     train_model()
-    
