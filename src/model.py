@@ -55,29 +55,3 @@ def predict_image_confidence(model, processed_image, class_names):
     confidence_scores = {class_names[i]: float(results[0][i]) for i in range(len(class_names))}
 
     return result_class, confidence_scores
-
-    # model = tf.keras.models.Sequential([
-    #     tf.keras.layers.Input(shape=(input_shape)),
-    #     tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
-    #     tf.keras.layers.MaxPooling2D(2, 2),
-
-    #     tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-    #     tf.keras.layers.MaxPooling2D(2, 2),
-
-    #     tf.keras.layers.Conv2D(128, (3, 3), activation='relu'),
-    #     tf.keras.layers.MaxPooling2D(2, 2),
-
-    #     tf.keras.layers.Conv2D(128, (3, 3), activation='relu'),
-    #     tf.keras.layers.MaxPooling2D(2, 2),
-
-    #     tf.keras.layers.Flatten(),
-    #     tf.keras.layers.Dense(512, activation='relu'),
-    #     tf.keras.layers.Dropout(.5),
-    #     tf.keras.layers.Dense(9, activation='softmax')  # 9 output classes for fruit categories
-    # ])
-    
-    # Compile the model with Adam optimizer and categorical crossentropy loss
-    # model.compile(optimizer='adam',
-    #               loss='categorical_crossentropy',
-    #               metrics=['accuracy'])
-

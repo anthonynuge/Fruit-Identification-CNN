@@ -8,8 +8,6 @@ import sys
 from src.model import build_model
 
 # Constants
-# DATA_DIR = '../data/raw'
-# MODELS_DIR = './models'
 BATCH_SIZE = 16
 EPOCHS = 30
 IMG_SIZE = (224, 224)

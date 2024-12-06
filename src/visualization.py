@@ -39,7 +39,7 @@ def print_classification_report(model, test_ds, class_names):
 
 def visualize_feature_map(feature_maps, title):
     filters_len = feature_maps.shape[-1]
-    plt.figure(figsize=(15,15))
+    plt.figure(figsize=(7,7))
     plt.title(title)
     for i in range(min(filters_len, 16)):
         plt.subplot(4, 4, i + 1)
